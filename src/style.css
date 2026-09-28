@@ -12,7 +12,9 @@ h1,
 h2,
 h3,
 p,
-ul {
+ul,
+ol,
+pre {
   margin: 0;
 }
 
@@ -22,7 +24,8 @@ body {
 }
 
 button,
-select {
+select,
+textarea {
   font-family: inherit;
 }
 
@@ -39,8 +42,8 @@ table {
 }
 
 /* ==========================================
-      LAYOUT UTAMA
-      ========================================== */
+   LAYOUT UTAMA
+   ========================================== */
 .app {
   display: flex;
   flex-direction: column;
@@ -80,25 +83,7 @@ table {
   color: #6b7280;
 }
 
-.question-select {
-  margin-left: 8px;
-  display: block;
-  background: #f9fafb;
-  border: 1px solid #d1d5db;
-  color: #374151;
-  font-size: 14px;
-  border-radius: 8px;
-  padding: 6px 8px;
-  font-weight: 600;
-  cursor: pointer;
-  outline: none;
-}
-
-.question-select:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 1px #3b82f6;
-}
-
+/* ---------- Badge difficulty (hanya tampil di layar lebar) ---------- */
 .badge {
   display: none;
   padding: 4px 12px;
@@ -114,10 +99,16 @@ table {
   border-color: #bbf7d0;
 }
 
-.badge-other {
+.badge-intermediate {
   background: #ffedd5;
   color: #c2410c;
   border-color: #fed7aa;
+}
+
+.badge-advance {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
 }
 
 /* ---------- Tab mobile ---------- */
@@ -155,8 +146,8 @@ table {
 }
 
 /* ==========================================
-      PANEL KIRI (SOAL & DATA)
-      ========================================== */
+   PANEL KIRI (SOAL & DATA)
+   ========================================== */
 .panel-left {
   display: none;
   width: 100%;
@@ -169,6 +160,110 @@ table {
   display: block;
 }
 
+/* ---------- Pilihan difficulty ---------- */
+.difficulty-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.difficulty-btn {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #6b7280;
+  transition: background-color 0.15s;
+}
+
+.difficulty-btn:hover {
+  background: #f9fafb;
+}
+
+.difficulty-btn.active-beginner {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.difficulty-btn.active-intermediate {
+  background: #ffedd5;
+  color: #c2410c;
+  border-color: #fed7aa;
+}
+
+.difficulty-btn.active-advance {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+/* ---------- Daftar soal ---------- */
+.question-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.question-item {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #374151;
+  transition: background-color 0.15s;
+}
+
+.question-item:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.question-item.active {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.question-item:disabled {
+  opacity: 0.5;
+}
+
+.btn-random {
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 8px 0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #374151;
+  transition: background-color 0.15s;
+}
+
+.btn-random:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.btn-random:disabled {
+  opacity: 0.5;
+}
+
+.divider {
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+  margin: 0 0 16px;
+}
+
+/* ---------- Detail soal ---------- */
 .question-title {
   font-size: 18px;
   font-weight: 700;
@@ -185,10 +280,6 @@ table {
 
 .section {
   margin-top: 24px;
-}
-
-.section-lg {
-  margin-top: 32px;
 }
 
 .section-title {
@@ -216,94 +307,11 @@ table {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-
-.table-card-header:hover {
-  background: #f3f4f6;
-}
-
-.column-count {
-  color: #9ca3af;
-  font-size: 12px;
-  font-weight: 400;
-}
-
-.column-list {
-  background: #fff;
-  padding: 8px 12px;
-  border-top: 1px solid #f3f4f6;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.column-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.column-name {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  color: #2563eb;
-  font-size: 12px;
-}
-
-.column-type {
-  color: #9ca3af;
-  font-size: 10px;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-
-/* ---------- Target Output ---------- */
-.target-wrapper {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  overflow-x: auto;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.target-table {
-  min-width: 100%;
-  text-align: left;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.target-table thead {
-  background: #faf5ff;
-}
-
-.target-table th {
-  padding: 8px 12px;
-  font-weight: 700;
-  color: #6b21a8;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.target-table tbody tr {
-  border-bottom: 1px solid #e5e7eb;
-  background: #fff;
-}
-
-.target-table td {
-  padding: 8px 12px;
-  color: #4b5563;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-}
-
-.loading-text {
-  font-size: 12px;
-  color: #9ca3af;
-  font-style: italic;
 }
 
 /* ==========================================
-      PANEL KANAN (EDITOR & HASIL)
-      ========================================== */
+   PANEL KANAN (EDITOR & HASIL)
+   ========================================== */
 .panel-right {
   width: 100%;
   display: flex;
@@ -333,22 +341,21 @@ table {
   padding: 8px 16px;
   text-transform: uppercase;
   font-weight: 600;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
-.autosave-label {
-  font-size: 10px;
-  color: #6b7280;
-  text-transform: none;
-}
-
-.code-editor {
+.sql-textarea {
   flex: 1 1 0%;
+  width: 100%;
+  min-height: 0;
+  padding: 16px;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: #111827;
+  color: #4ade80;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 16px;
-  overflow: auto;
-  text-align: left;
+  line-height: 1.5;
 }
 
 /* ---------- Output Console ---------- */
@@ -448,8 +455,8 @@ table {
 }
 
 /* ==========================================
-      FOOTER
-      ========================================== */
+   FOOTER
+   ========================================== */
 .footer {
   background: #fff;
   border-top: 1px solid #e5e7eb;
@@ -515,8 +522,8 @@ table {
 }
 
 /* ==========================================
-      MODAL AI TUTOR
-      ========================================== */
+   MODAL AI TUTOR
+   ========================================== */
 .modal-overlay {
   position: absolute;
   inset: 0;
@@ -642,7 +649,14 @@ table {
   margin-bottom: 8px;
 }
 
-.md-ul > * + * {
+.md-ol {
+  list-style: decimal;
+  padding-left: 20px;
+  margin-bottom: 8px;
+}
+
+.md-ul > * + *,
+.md-ol > * + * {
   margin-top: 4px;
 }
 
@@ -668,8 +682,8 @@ table {
 }
 
 /* ==========================================
-      RESPONSIVE (>= 768px, setara breakpoint md)
-      ========================================== */
+   RESPONSIVE (>= 768px, setara breakpoint md)
+   ========================================== */
 @media (min-width: 768px) {
   .badge {
     display: inline-block;

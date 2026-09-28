@@ -4,28 +4,72 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import ReactMarkdown from "react-markdown";
 import questionData from "./question.json";
 
-const currentQuestion = questionData[0];
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
-console.log("API Key terdeteksi:", GEMINI_API_KEY ? "YA" : "TIDAK (KOSONG)");
+
+// Nilai harus sama persis dengan field "difficulty" di question.json
+const DIFFICULTIES = ["Beginner", "Intermediate", "Advance"];
+const diffKey = (level) => level.toLowerCase();
+
+const FIRST_QUESTION =
+  questionData.find((q) => q.difficulty === "Beginner") || questionData[0];
+
+// Komponen render untuk ReactMarkdown (react-markdown v9 tidak punya prop `inline`,
+// jadi blok kode dideteksi lewat className "language-xxx" atau adanya baris baru)
+const mdComponents = {
+  p: ({ node, ...props }) => <p className="md-p" {...props} />,
+  strong: ({ node, ...props }) => <strong className="md-strong" {...props} />,
+  ul: ({ node, ...props }) => <ul className="md-ul" {...props} />,
+  ol: ({ node, ...props }) => <ol className="md-ol" {...props} />,
+  code: ({ node, className, children, ...props }) => {
+    const isBlock =
+      /language-/.test(className || "") || String(children).includes("\n");
+    return (
+      <code
+        className={isBlock ? "md-code-block" : "md-code-inline"}
+        {...props}
+      >
+        {children}
+      </code>
+    );
+  },
+};
+
+// BigInt (hasil COUNT/SUM DuckDB) tidak bisa di-stringify langsung
+const serialize = (rows) =>
+  JSON.stringify(rows, (key, value) =>
+    typeof value === "bigint" ? value.toString() : value
+  );
 
 export default function App() {
+  // ---------- State UI ----------
   const [activeTab, setActiveTab] = useState("SOAL");
-  const [query, setQuery] = useState("SELECT * FROM shipments;");
-  const [db, setDb] = useState(null);
+  const [difficulty, setDifficulty] = useState(FIRST_QUESTION.difficulty);
+  const [currentId, setCurrentId] = useState(FIRST_QUESTION.questionId);
+
+  // ---------- State database & editor ----------
   const [conn, setConn] = useState(null);
+  const [isQuestionLoading, setIsQuestionLoading] = useState(true);
+  const [query, setQuery] = useState(FIRST_QUESTION.defaultQuery || "");
   const [queryResult, setQueryResult] = useState(
     "Menyiapkan engine database..."
   );
 
-  // State AI
+  // ---------- State AI ----------
   const [aiResponse, setAiResponse] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
 
+  // ---------- Turunan ----------
+  const currentQuestion =
+    questionData.find((q) => q.questionId === currentId) || questionData[0];
+  const filteredQuestions = questionData.filter(
+    (q) => q.difficulty === difficulty
+  );
+
+  // ---------- (A) Nyalakan engine DuckDB sekali saja ----------
   useEffect(() => {
     let cancelled = false;
     let worker = null;
-    let database = null;
 
     async function initDB() {
       try {
@@ -36,7 +80,7 @@ export default function App() {
           })
         );
 
-        const worker = new Worker(workerUrl);
+        worker = new Worker(workerUrl);
         const database = new duckdb.AsyncDuckDB(
           new duckdb.ConsoleLogger(),
           worker
@@ -44,19 +88,13 @@ export default function App() {
         await database.instantiate(bundle.mainModule, bundle.pthreadWorker);
         URL.revokeObjectURL(workerUrl);
 
+        if (cancelled) {
+          worker.terminate();
+          return;
+        }
+
         const connection = await database.connect();
-
-        // Eksekusi pembuatan tabel dan insert data secara dinamis dari JSON
-        for (const table of currentQuestion.tables) {
-          await connection.query(table.createSql);
-          await connection.query(table.insertSql);
-        }
-
-        if (!cancelled) {
-          setDb(database);
-          setConn(connection);
-          setQueryResult("Database Ready! Klik Run untuk melihat hasil.");
-        }
+        if (!cancelled) setConn(connection);
       } catch (err) {
         if (!cancelled) {
           setQueryResult(`Gagal memuat database: ${err.message}`);
@@ -72,8 +110,74 @@ export default function App() {
     };
   }, []);
 
-  const handleRunQuery = async () => {
+  // ---------- (B) Muat tabel setiap kali soal berganti ----------
+  useEffect(() => {
     if (!conn) return;
+    let cancelled = false;
+
+    async function loadQuestion() {
+      setIsQuestionLoading(true);
+      setQueryResult("Menyiapkan data soal...");
+      setShowAiModal(false);
+      setAiResponse("");
+
+      try {
+        // Buang semua tabel dari soal sebelumnya (nama tabel bisa sama, skema beda)
+        const existing = await conn.query(
+          "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main'"
+        );
+        for (const row of existing.toArray()) {
+          await conn.query(`DROP TABLE IF EXISTS "${row.toJSON().table_name}"`);
+        }
+
+        // Buat tabel + isi data untuk soal yang dipilih
+        for (const table of currentQuestion.tables) {
+          await conn.query(table.createSql);
+          await conn.query(table.insertSql);
+        }
+
+        if (!cancelled) {
+          setQuery(currentQuestion.defaultQuery || "");
+          setQueryResult("Database Ready! Klik Run untuk melihat hasil.");
+        }
+      } catch (err) {
+        if (!cancelled) setQueryResult(`Gagal memuat soal: ${err.message}`);
+      } finally {
+        if (!cancelled) setIsQuestionLoading(false);
+      }
+    }
+
+    loadQuestion();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conn, currentId]);
+
+  // ---------- Handler: pilih difficulty / soal ----------
+  const handleChangeDifficulty = (level) => {
+    setDifficulty(level);
+    const first = questionData.find((q) => q.difficulty === level);
+    if (first) setCurrentId(first.questionId);
+  };
+
+  const handleSelectQuestion = (id) => {
+    setCurrentId(id);
+    setActiveTab("SOAL");
+  };
+
+  // Soal acak dari difficulty yang sedang dipilih (selain soal saat ini)
+  const handleRandomQuestion = () => {
+    const pool = filteredQuestions.filter((q) => q.questionId !== currentId);
+    if (pool.length === 0) return;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    handleSelectQuestion(pick.questionId);
+  };
+
+  // ---------- Handler: jalankan query ----------
+  const handleRunQuery = async () => {
+    if (!conn || isQuestionLoading) return;
     setQueryResult("Running...");
     try {
       const result = await conn.query(query);
@@ -90,29 +194,19 @@ export default function App() {
     }
   };
 
-  const handleTanyaAI = async () => {
-    console.log("Cek API Key:", GEMINI_API_KEY);
-    if (!GEMINI_API_KEY) {
-      alert("❌ API Key Kosong/Tidak Terbaca! Cek Environment Variable di Netlify.");
-      return;
-    }
+  // ---------- AI Tutor ----------
+  const askTutor = async () => {
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-flash-lite-latest",
+    });
 
-    setShowAiModal(true);
-    setIsAiLoading(true);
-    setAiResponse("");
-
-    try {
-      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({
-        model: "gemini-flash-lite-latest",
-      });
-
-      const promptText = `
+    const promptText = `
 Kamu adalah tutor SQL yang ahli. Muridmu sedang mengerjakan soal ini:
 "${currentQuestion.businessCase}"
 
 Skema tabel yang tersedia:
-${currentQuestion.tables.map(t => `- ${t.name}`).join('\n')}
+${currentQuestion.tables.map((t) => t.createSql).join("\n")}
 
 Saat ini muridmu menulis query SQL berikut:
 \`\`\`sql
@@ -121,11 +215,27 @@ ${query}
 
 Tugasmu:
 Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL secara langsung. Bantu dia berpikir langkah selanjutnya atau kasih tau di mana letak kesalahannya secara ramah.
-      `;
+    `;
 
-      const result = await model.generateContent(promptText);
-      const response = await result.response;
-      setAiResponse(response.text());
+    const result = await model.generateContent(promptText);
+    const response = await result.response;
+    return response.text();
+  };
+
+  const handleTanyaAI = async () => {
+    if (!GEMINI_API_KEY) {
+      alert(
+        "❌ API Key Kosong/Tidak Terbaca! Cek Environment Variable di Netlify."
+      );
+      return;
+    }
+
+    setShowAiModal(true);
+    setIsAiLoading(true);
+    setAiResponse("");
+
+    try {
+      setAiResponse(await askTutor());
     } catch (error) {
       console.error(error);
       setAiResponse(
@@ -136,9 +246,9 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
     }
   };
 
-  // FUNGSI BARU: Auto-Grader / Submit
+  // ---------- Auto-Grader / Submit ----------
   const handleSubmit = async () => {
-    if (!conn) return;
+    if (!conn || isQuestionLoading) return;
 
     setShowAiModal(true);
     setIsAiLoading(true);
@@ -148,82 +258,53 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
       const userResult = await conn.query(query);
       const userRows = userResult.toArray().map((row) => row.toJSON());
 
-      // Kunci jawaban sementara (Hardcoded untuk contoh)
-      const referenceQuery = currentQuestion.referenceQuery;
-      const refResult = await conn.query(referenceQuery);
+      const refResult = await conn.query(currentQuestion.referenceQuery);
       const refRows = refResult.toArray().map((row) => row.toJSON());
 
-      const isCorrect =
-        JSON.stringify(userRows, (key, value) =>
-          typeof value === "bigint" ? value.toString() : value
-        ) ===
-        JSON.stringify(refRows, (key, value) =>
-          typeof value === "bigint" ? value.toString() : value
-        );
+      const isCorrect = serialize(userRows) === serialize(refRows);
 
       if (isCorrect) {
-        setIsAiLoading(false);
         setAiResponse(
           "🎉 **BENAR SEKALI!**\n\nHasil tabelmu sudah sama persis dengan yang diharapkan. Kamu sudah memahami konsep ini dengan baik."
         );
+      } else if (!GEMINI_API_KEY) {
+        setAiResponse(
+          "❌ **Belum sesuai.**\n\nHasil tabelmu belum sama dengan yang diharapkan. Cek lagi kolom, urutan, dan kondisi filter-mu."
+        );
       } else {
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({
-          model: "gemini-flash-lite-latest",
-        });
-
-        const promptText = `
-          Kamu adalah tutor SQL yang ahli. Muridmu sedang mengerjakan soal ini:
-          "${currentQuestion.businessCase}"
-
-          Saat ini muridmu menulis query SQL berikut:
-          \`\`\`sql
-          ${query}
-          \`\`\`
-
-          Tugasmu:
-          Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL secara langsung. Bantu dia berpikir langkah selanjutnya atau kasih tau di mana letak kesalahannya secara ramah.
-      `;
-
-        const result = await model.generateContent(promptText);
-        const response = await result.response;
-        setAiResponse(response.text());
-        setIsAiLoading(false);
+        setAiResponse(await askTutor());
       }
     } catch (err) {
-      setIsAiLoading(false);
       setAiResponse(
         `❌ **Terdapat Error Sintaks SQL:**\n\n\`${err.message}\`\n\nCoba periksa lagi penulisanmu.`
       );
+    } finally {
+      setIsAiLoading(false);
     }
   };
 
-  const tabClass = (tab) =>
-    `flex-1 py-3 text-sm font-semibold text-center border-b-2 ${
-      activeTab === tab
-        ? "border-blue-600 text-blue-600"
-        : "border-transparent text-gray-500"
-    }`;
+  const tabClass = (tab) => `tab${activeTab === tab ? " active" : ""}`;
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 text-gray-900 font-sans relative">
-      <header className="bg-white border-b px-4 py-3 flex justify-between items-center shrink-0">
-        <div>
-          <h1 className="font-bold text-lg">SQL-AI Academy</h1>
-          <p className="text-sm text-gray-500">
-            On-Time Delivery Rate & SLA Breach
-          </p>
+    <div className="app">
+      {/* ---------- Header ---------- */}
+      <header className="header">
+        <div className="header-left">
+          <div>
+            <h1 className="app-title">SQL-AI Academy</h1>
+            <p className="app-subtitle">{currentQuestion.title}</p>
+          </div>
         </div>
-        <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold border border-orange-200">
-          Intermediate
+        <span
+          className={`badge badge-${diffKey(currentQuestion.difficulty)}`}
+        >
+          {currentQuestion.difficulty}
         </span>
       </header>
 
-      <div className="md:hidden flex bg-white border-b border-gray-200 shrink-0">
-        <button
-          onClick={() => setActiveTab("SOAL")}
-          className={tabClass("SOAL")}
-        >
+      {/* ---------- Tab mobile ---------- */}
+      <div className="tabs">
+        <button onClick={() => setActiveTab("SOAL")} className={tabClass("SOAL")}>
           📖 Soal & Data
         </button>
         <button onClick={() => setActiveTab("SQL")} className={tabClass("SQL")}>
@@ -237,24 +318,58 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
         </button>
       </div>
 
-      <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-        <div
-          className={`w-full md:w-1/3 bg-white p-5 overflow-y-auto ${
-            activeTab === "SOAL" ? "block" : "hidden md:block"
-          }`}
-        >
-          <h2 className="text-lg font-bold mb-2">{currentQuestion.title}</h2>
-          <p className="text-gray-600 text-sm mb-4 leading-relaxed">
-            {currentQuestion.businessCase}
-          </p>
-          <div className="mt-6">
-            <h3 className="text-sm font-bold text-gray-500 uppercase mb-3">
-              Schema Explorer
-            </h3>
-            {/* Render nama tabel otomatis dari JSON */}
-            {currentQuestion.tables.map((table, index) => (
-              <div key={index} className="border rounded-lg mb-3">
-                <div className="bg-gray-100 px-3 py-2 text-sm font-bold flex justify-between items-center cursor-pointer">
+      <main className="main">
+        {/* ---------- Panel kiri: soal & data ---------- */}
+        <div className={`panel-left${activeTab === "SOAL" ? " active" : ""}`}>
+          {/* Pilihan difficulty */}
+          <div className="difficulty-tabs">
+            {DIFFICULTIES.map((level) => (
+              <button
+                key={level}
+                onClick={() => handleChangeDifficulty(level)}
+                className={`difficulty-btn${
+                  difficulty === level ? ` active-${diffKey(level)}` : ""
+                }`}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
+
+          {/* Daftar soal sesuai difficulty */}
+          <div className="question-list">
+            {filteredQuestions.map((q, i) => (
+              <button
+                key={q.questionId}
+                disabled={isQuestionLoading}
+                onClick={() => handleSelectQuestion(q.questionId)}
+                className={`question-item${
+                  q.questionId === currentId ? " active" : ""
+                }`}
+              >
+                {i + 1}. {q.title}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={handleRandomQuestion}
+            disabled={isQuestionLoading || filteredQuestions.length < 2}
+            className="btn-random"
+          >
+            🔀 Soal Acak ({difficulty})
+          </button>
+
+          <hr className="divider" />
+
+          <h2 className="question-title">{currentQuestion.title}</h2>
+          <p className="question-case">{currentQuestion.businessCase}</p>
+
+          <div className="section">
+            <h3 className="section-title">Schema Explorer</h3>
+            {currentQuestion.tables.map((table) => (
+              <div key={table.name} className="table-card">
+                <div className="table-card-header">
                   <span>📁 {table.name}</span>
                 </div>
               </div>
@@ -262,17 +377,12 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
           </div>
         </div>
 
-        <div className="w-full md:w-2/3 flex flex-col flex-1 min-h-0 md:border-l border-gray-200">
-          <div
-            className={`flex-1 min-h-0 flex-col bg-gray-900 ${
-              activeTab === "SQL" ? "flex" : "hidden md:flex"
-            }`}
-          >
-            <div className="bg-gray-800 text-gray-400 text-xs px-4 py-2 uppercase font-semibold">
-              SQL Editor (DuckDB)
-            </div>
+        {/* ---------- Panel kanan: editor & hasil ---------- */}
+        <div className="panel-right">
+          <div className={`editor-pane${activeTab === "SQL" ? " active" : ""}`}>
+            <div className="editor-header">SQL Editor (DuckDB)</div>
             <textarea
-              className="flex-1 bg-gray-900 text-green-400 font-mono p-4 outline-none resize-none"
+              className="sql-textarea"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               spellCheck={false}
@@ -280,151 +390,94 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
           </div>
 
           <div
-            className={`flex-col bg-white border-t md:h-1/2 ${
-              activeTab === "HASIL"
-                ? "flex flex-1 md:flex-none"
-                : "hidden md:flex"
-            }`}
+            className={`result-pane${activeTab === "HASIL" ? " active" : ""}`}
           >
-            <div className="bg-gray-100 text-gray-500 text-xs px-4 py-2 uppercase font-semibold flex justify-between">
+            <div className="result-header">
               <span>Output Console</span>
-              <span className="text-green-600 flex items-center gap-1">
-                <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>{" "}
+              <span className="status">
+                <span className="status-dot"></span>{" "}
                 {conn ? "Ready" : "Booting..."}
               </span>
             </div>
-            <div className="flex-1 overflow-auto bg-white relative">
+            <div className="result-body">
               {Array.isArray(queryResult) ? (
-                <table className="min-w-full text-left text-sm whitespace-nowrap border-collapse">
-                  <thead className="sticky top-0 bg-gray-50 shadow-sm z-10">
+                <table className="result-table">
+                  <thead>
                     <tr>
                       {Object.keys(queryResult[0] || {}).map((colName) => (
-                        <th
-                          key={colName}
-                          className="px-4 py-2 font-bold text-gray-700 border-b"
-                        >
-                          {colName}
-                        </th>
+                        <th key={colName}>{colName}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {queryResult.map((row, i) => (
-                      <tr
-                        key={i}
-                        className="border-b hover:bg-orange-50 transition-colors"
-                      >
+                      <tr key={i}>
                         {Object.values(row).map((val, j) => (
-                          <td
-                            key={j}
-                            className="px-4 py-2 text-gray-600 font-mono text-xs"
-                          >
-                            {String(val)}
-                          </td>
+                          <td key={j}>{String(val)}</td>
                         ))}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               ) : (
-                <div className="p-4 flex items-center justify-center h-full text-gray-500 text-sm font-mono whitespace-pre-wrap">
-                  {queryResult}
-                </div>
+                <div className="result-message">{queryResult}</div>
               )}
             </div>
           </div>
         </div>
       </main>
 
-      <footer className="bg-white border-t p-3 md:p-4 flex justify-between md:justify-end gap-3 shrink-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <button
-          onClick={handleTanyaAI}
-          className="md:mr-auto flex items-center gap-2 text-purple-600 border border-purple-200 bg-purple-50 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-purple-100 transition-colors"
-        >
+      {/* ---------- Footer ---------- */}
+      <footer className="footer">
+        <button onClick={handleTanyaAI} className="btn-ai">
           ✨ Tanya AI
         </button>
         <button
           onClick={handleRunQuery}
-          disabled={!conn}
-          className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-semibold text-sm border hover:bg-gray-200 transition-colors disabled:opacity-50"
+          disabled={!conn || isQuestionLoading}
+          className="btn btn-run"
         >
           ▶ Run
         </button>
         <button
           onClick={handleSubmit}
-          disabled={!conn}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold text-sm shadow-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+          disabled={!conn || isQuestionLoading}
+          className="btn btn-submit"
         >
           Submit 🚀
         </button>
       </footer>
 
-      {/* POP-UP MODAL AI */}
+      {/* ---------- Pop-up modal AI ---------- */}
       {showAiModal && (
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="bg-purple-600 text-white px-4 py-3 flex justify-between items-center">
-              <h3 className="font-bold flex items-center gap-2">✨ AI Tutor</h3>
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3 className="modal-title">✨ AI Tutor</h3>
               <button
                 onClick={() => setShowAiModal(false)}
-                className="text-white hover:text-gray-200 text-xl font-bold"
+                className="modal-close"
               >
                 &times;
               </button>
             </div>
-            <div className="p-5 overflow-y-auto text-gray-700 text-sm flex-1">
+            <div className="modal-body">
               {isAiLoading ? (
-                <div className="flex items-center justify-center h-20 text-purple-600 font-semibold animate-pulse">
+                <div className="modal-loading">
                   AI sedang mengevaluasi kodemu...
                 </div>
               ) : (
-                <div className="text-gray-700 text-sm leading-relaxed space-y-3">
-                  <ReactMarkdown
-                    components={{
-                      p: ({ node, ...props }) => (
-                        <p className="mb-2" {...props} />
-                      ),
-                      strong: ({ node, ...props }) => (
-                        <strong
-                          className="font-bold text-purple-800"
-                          {...props}
-                        />
-                      ),
-                      ul: ({ node, ...props }) => (
-                        <ul
-                          className="list-disc pl-5 mb-2 space-y-1"
-                          {...props}
-                        />
-                      ),
-                      ol: ({ node, ...props }) => (
-                        <ol
-                          className="list-decimal pl-5 mb-2 space-y-1"
-                          {...props}
-                        />
-                      ),
-                      code: ({ node, inline, ...props }) =>
-                        inline ? (
-                          <code
-                            className="bg-gray-100 text-pink-600 px-1 py-0.5 rounded font-mono text-xs"
-                            {...props}
-                          />
-                        ) : (
-                          <code
-                            className="block bg-gray-900 text-green-400 p-3 rounded-lg font-mono text-xs overflow-x-auto mb-2"
-                            {...props}
-                          />
-                        ),
-                    }}
-                  >
+                <div className="modal-content">
+                  <ReactMarkdown components={mdComponents}>
                     {aiResponse}
                   </ReactMarkdown>
                 </div>
               )}
             </div>
-            <div className="bg-gray-50 px-4 py-3 border-t text-right">
+            <div className="modal-footer">
               <button
                 onClick={() => setShowAiModal(false)}
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-700"
+                className="btn-close"
               >
                 Tutup
               </button>
