@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import * as duckdb from "@duckdb/duckdb-wasm";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import ReactMarkdown from "react-markdown";
-import currentQuestion from "./question.json";
+import QuestionData from "./question.json";
 
 const currentQuestion = currentQuestion[0];
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
