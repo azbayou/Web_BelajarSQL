@@ -3,6 +3,8 @@ import * as duckdb from "@duckdb/duckdb-wasm";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import ReactMarkdown from "react-markdown";
 import questionData from "./question.json";
+import questionList from "./question.json";
+
 const questionData = questionList[0]; // atau pilih berdasarkan state / questionId
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
 
