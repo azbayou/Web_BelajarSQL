@@ -6,6 +6,7 @@ import questionData from "./question.json";
 
 const currentQuestion = questionData[0];
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
+console.log("API Key terdeteksi:", GEMINI_API_KEY ? "YA" : "TIDAK (KOSONG)");
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("SOAL");
