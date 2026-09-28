@@ -4,7 +4,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import ReactMarkdown from "react-markdown";
 import questionData from "./question.json";
 
-const currentQuestion = currentQuestion[0];
+const currentQuestion = questionData[0];
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
 
 export default function App() {
