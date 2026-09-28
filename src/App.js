@@ -4,8 +4,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import ReactMarkdown from "react-markdown";
 import questionData from "./question.json";
 
-// ⚠️ GANTI DENGAN API KEY MILIKMU (Yang berawalan AIza...)
-const GEMINI_API_KEY = "AQ.Ab8RN6LDpJ7IyYCKmo4_JoYRe1VnbQWS4mK32RE5hrCOzfHD_Q";
+const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("SOAL");
@@ -102,7 +101,7 @@ export default function App() {
     try {
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({
-        model: "gemini-3.5-flash-lite",
+        model: "gemini-3.5-flash",
       });
 
       const promptText = `
