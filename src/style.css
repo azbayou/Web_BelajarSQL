@@ -353,6 +353,54 @@ table {
   font-weight: 600;
 }
 
+/* ---------- Expected Table ---------- */
+.target-wrapper {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow-x: auto;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.target-table {
+  min-width: 100%;
+  text-align: left;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.target-table thead {
+  background: #faf5ff;
+}
+
+.target-table th {
+  padding: 8px 12px;
+  font-weight: 700;
+  color: #6b21a8;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.target-table tbody tr {
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.target-table tbody tr:last-child {
+  border-bottom: 0;
+}
+
+.target-table td {
+  padding: 8px 12px;
+  color: #4b5563;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.helper-text {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.5;
+}
+
 /* ==========================================
    PANEL KANAN (EDITOR & HASIL)
    ========================================== */

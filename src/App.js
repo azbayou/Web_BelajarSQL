@@ -40,6 +40,35 @@ const serialize = (rows) =>
     typeof value === "bigint" ? value.toString() : value
   );
 
+// Ubah hasil query DuckDB jadi array of object.
+// Kolom DECIMAL dari DuckDB-WASM datang sebagai angka "tanpa koma" (mis. 1.5 dengan
+// scale 3 jadi 1500), jadi di sini dikembalikan ke nilai aslinya.
+const rowsFromResult = (result) => {
+  const scales = {};
+  result.schema.fields.forEach((f) => {
+    if (
+      f.type &&
+      typeof f.type.scale === "number" &&
+      typeof f.type.precision === "number"
+    ) {
+      scales[f.name] = f.type.scale;
+    }
+  });
+
+  return result.toArray().map((row) => {
+    const obj = row.toJSON();
+    for (const [name, scale] of Object.entries(scales)) {
+      if (obj[name] == null) continue;
+      try {
+        obj[name] = Number(BigInt(String(obj[name]))) / 10 ** scale;
+      } catch (e) {
+        // biarkan apa adanya kalau format tidak dikenali
+      }
+    }
+    return obj;
+  });
+};
+
 // Ambil daftar kolom (nama + tipe) dari string CREATE TABLE
 const parseColumns = (createSql) => {
   const start = createSql.indexOf("(");
@@ -76,6 +105,7 @@ export default function App() {
   const [difficulty, setDifficulty] = useState(FIRST_QUESTION.difficulty);
   const [currentId, setCurrentId] = useState(FIRST_QUESTION.questionId);
   const [openTables, setOpenTables] = useState({}); // { namaTabel: true/false }
+  const [expectedRows, setExpectedRows] = useState(null); // hasil referenceQuery
 
   // ---------- State database & editor ----------
   const [conn, setConn] = useState(null);
@@ -150,6 +180,7 @@ export default function App() {
       setIsQuestionLoading(true);
       setQueryResult("Menyiapkan data soal...");
       setOpenTables({});
+      setExpectedRows(null);
       setShowAiModal(false);
       setAiResponse("");
 
@@ -168,12 +199,19 @@ export default function App() {
           await conn.query(table.insertSql);
         }
 
+        // Jalankan referenceQuery untuk tabel "Expected Table"
+        const refResult = await conn.query(currentQuestion.referenceQuery);
+        if (!cancelled) setExpectedRows(rowsFromResult(refResult));
+
         if (!cancelled) {
           setQuery(currentQuestion.defaultQuery || "");
           setQueryResult("Database Ready! Klik Run untuk melihat hasil.");
         }
       } catch (err) {
-        if (!cancelled) setQueryResult(`Gagal memuat soal: ${err.message}`);
+        if (!cancelled) {
+          setExpectedRows([]);
+          setQueryResult(`Gagal memuat soal: ${err.message}`);
+        }
       } finally {
         if (!cancelled) setIsQuestionLoading(false);
       }
@@ -215,7 +253,7 @@ export default function App() {
     setQueryResult("Running...");
     try {
       const result = await conn.query(query);
-      const rows = result.toArray().map((row) => row.toJSON());
+      const rows = rowsFromResult(result);
 
       if (rows.length === 0) {
         setQueryResult("Query berhasil, tapi tidak ada data (0 rows).");
@@ -290,10 +328,10 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
 
     try {
       const userResult = await conn.query(query);
-      const userRows = userResult.toArray().map((row) => row.toJSON());
+      const userRows = rowsFromResult(userResult);
 
       const refResult = await conn.query(currentQuestion.referenceQuery);
-      const refRows = refResult.toArray().map((row) => row.toJSON());
+      const refRows = rowsFromResult(refResult);
 
       const isCorrect = serialize(userRows) === serialize(refRows);
 
@@ -432,6 +470,42 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
                 </div>
               );
             })}
+          </div>
+
+          <div className="section">
+            <h3 className="section-title">Expected Table</h3>
+            {expectedRows === null ? (
+              <p className="helper-text">Menyiapkan tabel referensi...</p>
+            ) : expectedRows.length === 0 ? (
+              <p className="helper-text">Tabel referensi tidak tersedia.</p>
+            ) : (
+              <>
+                <div className="target-wrapper">
+                  <table className="target-table">
+                    <thead>
+                      <tr>
+                        {Object.keys(expectedRows[0]).map((colName) => (
+                          <th key={colName}>{colName}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {expectedRows.map((row, i) => (
+                        <tr key={i}>
+                          {Object.values(row).map((val, j) => (
+                            <td key={j}>{String(val)}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="helper-text">
+                  Hasil querymu harus sama dengan tabel ini (nama kolom, nilai,
+                  dan urutan baris).
+                </p>
+              </>
+            )}
           </div>
         </div>
 
