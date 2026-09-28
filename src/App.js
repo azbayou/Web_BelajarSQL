@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import * as duckdb from "@duckdb/duckdb-wasm";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import ReactMarkdown from "react-markdown";
-import questionData from "./question.json";
+import currentQuestion from "./question.json";
 
-const currentQuestion = questionData[0];
+const currentQuestion = currentQuestion[0];
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
 
 export default function App() {
@@ -46,7 +46,7 @@ export default function App() {
         const connection = await database.connect();
 
         // Eksekusi pembuatan tabel dan insert data secara dinamis dari JSON
-        for (const table of questionData.tables) {
+        for (const table of currentQuestion.tables) {
           await connection.query(table.createSql);
           await connection.query(table.insertSql);
         }
@@ -107,10 +107,10 @@ export default function App() {
 
       const promptText = `
 Kamu adalah tutor SQL yang ahli. Muridmu sedang mengerjakan soal ini:
-"${questionData.businessCase}"
+"${currentQuestion.businessCase}"
 
 Skema tabel yang tersedia:
-${questionData.tables.map(t => `- ${t.name}`).join('\n')}
+${currentQuestion.tables.map(t => `- ${t.name}`).join('\n')}
 
 Saat ini muridmu menulis query SQL berikut:
 \`\`\`sql
@@ -147,7 +147,7 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
       const userRows = userResult.toArray().map((row) => row.toJSON());
 
       // Kunci jawaban sementara (Hardcoded untuk contoh)
-      const referenceQuery = questionData.referenceQuery;
+      const referenceQuery = currentQuestion.referenceQuery;
       const refResult = await conn.query(referenceQuery);
       const refRows = refResult.toArray().map((row) => row.toJSON());
 
@@ -172,7 +172,7 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
 
         const promptText = `
           Kamu adalah tutor SQL yang ahli. Muridmu sedang mengerjakan soal ini:
-          "${questionData.businessCase}"
+          "${currentQuestion.businessCase}"
 
           Saat ini muridmu menulis query SQL berikut:
           \`\`\`sql
@@ -241,16 +241,16 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
             activeTab === "SOAL" ? "block" : "hidden md:block"
           }`}
         >
-          <h2 className="text-lg font-bold mb-2">{questionData.title}</h2>
+          <h2 className="text-lg font-bold mb-2">{currentQuestion.title}</h2>
           <p className="text-gray-600 text-sm mb-4 leading-relaxed">
-            {questionData.businessCase}
+            {currentQuestion.businessCase}
           </p>
           <div className="mt-6">
             <h3 className="text-sm font-bold text-gray-500 uppercase mb-3">
               Schema Explorer
             </h3>
             {/* Render nama tabel otomatis dari JSON */}
-            {questionData.tables.map((table, index) => (
+            {currentQuestion.tables.map((table, index) => (
               <div key={index} className="border rounded-lg mb-3">
                 <div className="bg-gray-100 px-3 py-2 text-sm font-bold flex justify-between items-center cursor-pointer">
                   <span>📁 {table.name}</span>
