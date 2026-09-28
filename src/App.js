@@ -90,8 +90,8 @@ export default function App() {
   };
 
   const handleTanyaAI = async () => {
-    if (GEMINI_API_KEY === "GEMINI_API_KEY") {
-      alert("Oops! Kamu belum memasukkan API Key di kodenya.");
+    if (!GEMINI_API_KEY) {
+      alert("Oops! Kamu belum memasukkan API Key di Environment Variables.");
       return;
     }
 
