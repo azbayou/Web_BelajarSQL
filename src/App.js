@@ -104,7 +104,7 @@ export default function App() {
     try {
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({
-        model: "gemini-3.5-flash",
+        model: "gemini-flash-lite-latest",
       });
 
       const promptText = `
@@ -169,7 +169,7 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
       } else {
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({
-          model: "gemini-3.5-flash",
+          model: "gemini-flash-lite-latest",
         });
 
         const promptText = `
