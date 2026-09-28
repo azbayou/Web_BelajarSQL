@@ -91,6 +91,7 @@ export default function App() {
   };
 
   const handleTanyaAI = async () => {
+    console.log("Cek API Key:", GEMINI_API_KEY);
     if (!GEMINI_API_KEY) {
       alert("Oops! Kamu belum memasukkan API Key di Environment Variables.");
       return;
