@@ -40,11 +40,42 @@ const serialize = (rows) =>
     typeof value === "bigint" ? value.toString() : value
   );
 
+// Ambil daftar kolom (nama + tipe) dari string CREATE TABLE
+const parseColumns = (createSql) => {
+  const start = createSql.indexOf("(");
+  const end = createSql.lastIndexOf(")");
+  if (start === -1 || end === -1) return [];
+
+  const body = createSql.slice(start + 1, end);
+  const parts = [];
+  let depth = 0;
+  let buf = "";
+  for (const ch of body) {
+    if (ch === "(") depth++;
+    if (ch === ")") depth--;
+    if (ch === "," && depth === 0) {
+      parts.push(buf);
+      buf = "";
+    } else {
+      buf += ch;
+    }
+  }
+  if (buf.trim()) parts.push(buf);
+
+  return parts
+    .map((p) => {
+      const tokens = p.trim().split(/\s+/);
+      return { name: tokens[0], type: tokens.slice(1).join(" ") };
+    })
+    .filter((c) => c.name);
+};
+
 export default function App() {
   // ---------- State UI ----------
   const [activeTab, setActiveTab] = useState("SOAL");
   const [difficulty, setDifficulty] = useState(FIRST_QUESTION.difficulty);
   const [currentId, setCurrentId] = useState(FIRST_QUESTION.questionId);
+  const [openTables, setOpenTables] = useState({}); // { namaTabel: true/false }
 
   // ---------- State database & editor ----------
   const [conn, setConn] = useState(null);
@@ -118,6 +149,7 @@ export default function App() {
     async function loadQuestion() {
       setIsQuestionLoading(true);
       setQueryResult("Menyiapkan data soal...");
+      setOpenTables({});
       setShowAiModal(false);
       setAiResponse("");
 
@@ -173,6 +205,9 @@ export default function App() {
     const pick = pool[Math.floor(Math.random() * pool.length)];
     handleSelectQuestion(pick.questionId);
   };
+
+  const toggleTable = (name) =>
+    setOpenTables((prev) => ({ ...prev, [name]: !prev[name] }));
 
   // ---------- Handler: jalankan query ----------
   const handleRunQuery = async () => {
@@ -366,13 +401,37 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
 
           <div className="section">
             <h3 className="section-title">Schema Explorer</h3>
-            {currentQuestion.tables.map((table) => (
-              <div key={table.name} className="table-card">
-                <div className="table-card-header">
-                  <span>📁 {table.name}</span>
+            {currentQuestion.tables.map((table) => {
+              const columns = parseColumns(table.createSql);
+              const isOpen = !!openTables[table.name];
+              return (
+                <div key={table.name} className="table-card">
+                  <button
+                    type="button"
+                    className="table-card-header"
+                    onClick={() => toggleTable(table.name)}
+                    aria-expanded={isOpen}
+                  >
+                    <span>
+                      {isOpen ? "📂" : "📁"} {table.name}
+                    </span>
+                    <span className="column-count">
+                      {columns.length} kolom {isOpen ? "▲" : "▼"}
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div className="column-list">
+                      {columns.map((col) => (
+                        <div key={col.name} className="column-row">
+                          <span className="column-name">{col.name}</span>
+                          <span className="column-type">{col.type}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
