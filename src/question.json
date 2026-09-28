@@ -1,0 +1,272 @@
+[
+  {
+    "questionId": "q003",
+    "title": "Daftar Driver Aktif",
+    "difficulty": "Beginner",
+    "businessCase": "Tim operasional membutuhkan daftar semua driver yang saat ini berstatus 'ACTIVE' untuk alokasi pengiriman hari ini.",
+    "tables": [
+      {
+        "name": "drivers",
+        "createSql": "CREATE TABLE drivers (driver_id VARCHAR, name VARCHAR, status VARCHAR);",
+        "insertSql": "INSERT INTO drivers VALUES ('D01', 'Budi', 'ACTIVE'), ('D02', 'Anto', 'INACTIVE'), ('D03', 'Citra', 'ACTIVE');"
+      }
+    ],
+    "referenceQuery": "SELECT driver_id, name FROM drivers WHERE status = 'ACTIVE'",
+    "defaultQuery": "SELECT * FROM drivers;"
+  },
+  {
+    "questionId": "q004",
+    "title": "Total Pendapatan per Metode Pembayaran",
+    "difficulty": "Beginner",
+    "businessCase": "Tim finance ingin mengetahui total nominal transaksi berdasarkan masing-masing metode pembayaran.",
+    "tables": [
+      {
+        "name": "payments",
+        "createSql": "CREATE TABLE payments (payment_id VARCHAR, method VARCHAR, amount INT);",
+        "insertSql": "INSERT INTO payments VALUES ('P01', 'COD', 50000), ('P02', 'Transfer Bank', 150000), ('P03', 'COD', 75000);"
+      }
+    ],
+    "referenceQuery": "SELECT method, SUM(amount) as total_revenue FROM payments GROUP BY method",
+    "defaultQuery": "SELECT * FROM payments;"
+  },
+  {
+    "questionId": "q005",
+    "title": "Jumlah Pesanan Dibatalkan",
+    "difficulty": "Beginner",
+    "businessCase": "Customer Service perlu mengetahui berapa banyak pesanan yang statusnya 'CANCELLED' pada bulan ini.",
+    "tables": [
+      {
+        "name": "orders",
+        "createSql": "CREATE TABLE orders (order_id VARCHAR, status VARCHAR);",
+        "insertSql": "INSERT INTO orders VALUES ('O01', 'COMPLETED'), ('O02', 'CANCELLED'), ('O03', 'CANCELLED');"
+      }
+    ],
+    "referenceQuery": "SELECT COUNT(order_id) as total_cancelled FROM orders WHERE status = 'CANCELLED'",
+    "defaultQuery": "SELECT * FROM orders;"
+  },
+  {
+    "questionId": "q006",
+    "title": "Rata-rata Rating Driver",
+    "difficulty": "Beginner",
+    "businessCase": "Evaluasi kinerja driver bulanan. Hitung rata-rata rating untuk masing-masing driver_id.",
+    "tables": [
+      {
+        "name": "reviews",
+        "createSql": "CREATE TABLE reviews (review_id VARCHAR, driver_id VARCHAR, rating INT);",
+        "insertSql": "INSERT INTO reviews VALUES ('R01', 'D01', 5), ('R02', 'D01', 4), ('R03', 'D02', 3);"
+      }
+    ],
+    "referenceQuery": "SELECT driver_id, AVG(rating) as avg_rating FROM reviews GROUP BY driver_id",
+    "defaultQuery": "SELECT * FROM reviews;"
+  },
+  {
+    "questionId": "q007",
+    "title": "Pelanggan Asal Jakarta",
+    "difficulty": "Beginner",
+    "businessCase": "Marketing ingin mengirimkan promo khusus untuk pelanggan yang berdomisili di 'Jakarta'. Tampilkan nama pelanggan dan email mereka.",
+    "tables": [
+      {
+        "name": "customers",
+        "createSql": "CREATE TABLE customers (customer_id VARCHAR, name VARCHAR, email VARCHAR, city VARCHAR);",
+        "insertSql": "INSERT INTO customers VALUES ('C01', 'Andi', 'andi@mail.com', 'Jakarta'), ('C02', 'Beni', 'beni@mail.com', 'Bandung');"
+      }
+    ],
+    "referenceQuery": "SELECT name, email FROM customers WHERE city = 'Jakarta'",
+    "defaultQuery": "SELECT * FROM customers;"
+  },
+  {
+    "questionId": "q008",
+    "title": "Stok Produk Menipis",
+    "difficulty": "Beginner",
+    "businessCase": "Tim gudang butuh list produk yang stoknya kurang dari atau sama dengan 10 agar bisa segera di-restock.",
+    "tables": [
+      {
+        "name": "products",
+        "createSql": "CREATE TABLE products (product_id VARCHAR, name VARCHAR, stock INT);",
+        "insertSql": "INSERT INTO products VALUES ('PRD1', 'Kardus Besar', 5), ('PRD2', 'Bubble Wrap', 50), ('PRD3', 'Lakban', 8);"
+      }
+    ],
+    "referenceQuery": "SELECT name, stock FROM products WHERE stock <= 10",
+    "defaultQuery": "SELECT * FROM products;"
+  },
+  {
+    "questionId": "q009",
+    "title": "Total Berat Paket per Hub",
+    "difficulty": "Beginner",
+    "businessCase": "Tim logistik perlu menghitung total berat paket (dalam kg) yang ada di setiap hub asal.",
+    "tables": [
+      {
+        "name": "packages",
+        "createSql": "CREATE TABLE packages (package_id VARCHAR, origin_hub VARCHAR, weight_kg DECIMAL);",
+        "insertSql": "INSERT INTO packages VALUES ('PKG1', 'H01', 1.5), ('PKG2', 'H01', 2.0), ('PKG3', 'H02', 5.0);"
+      }
+    ],
+    "referenceQuery": "SELECT origin_hub, SUM(weight_kg) as total_weight FROM packages GROUP BY origin_hub",
+    "defaultQuery": "SELECT * FROM packages;"
+  },
+  {
+    "questionId": "q010",
+    "title": "Penggunaan Kode Promo",
+    "difficulty": "Beginner",
+    "businessCase": "Tampilkan daftar pesanan yang menggunakan kode promo (promo_code tidak null).",
+    "tables": [
+      {
+        "name": "transactions",
+        "createSql": "CREATE TABLE transactions (trx_id VARCHAR, amount INT, promo_code VARCHAR);",
+        "insertSql": "INSERT INTO transactions VALUES ('T01', 100000, 'DISKON10'), ('T02', 50000, NULL), ('T03', 75000, 'CASHBACK20');"
+      }
+    ],
+    "referenceQuery": "SELECT trx_id, amount, promo_code FROM transactions WHERE promo_code IS NOT NULL",
+    "defaultQuery": "SELECT * FROM transactions;"
+  },
+  {
+    "questionId": "q011",
+    "title": "Pesanan Lebih dari 100 Ribu",
+    "difficulty": "Beginner",
+    "businessCase": "Cari semua transaksi yang nominalnya (amount) di atas 100.000.",
+    "tables": [
+      {
+        "name": "transactions",
+        "createSql": "CREATE TABLE transactions (trx_id VARCHAR, amount INT);",
+        "insertSql": "INSERT INTO transactions VALUES ('T01', 150000), ('T02', 50000), ('T03', 120000);"
+      }
+    ],
+    "referenceQuery": "SELECT trx_id, amount FROM transactions WHERE amount > 100000",
+    "defaultQuery": "SELECT * FROM transactions;"
+  },
+  {
+    "questionId": "q012",
+    "title": "Hub di Jawa Barat",
+    "difficulty": "Beginner",
+    "businessCase": "Tampilkan nama hub yang berlokasi di provinsi 'Jawa Barat'.",
+    "tables": [
+      {
+        "name": "hubs",
+        "createSql": "CREATE TABLE hubs (hub_id VARCHAR, hub_name VARCHAR, province VARCHAR);",
+        "insertSql": "INSERT INTO hubs VALUES ('H01', 'Cakung Hub', 'DKI Jakarta'), ('H02', 'Tambun Hub', 'Jawa Barat'), ('H03', 'Cikarang Hub', 'Jawa Barat');"
+      }
+    ],
+    "referenceQuery": "SELECT hub_name FROM hubs WHERE province = 'Jawa Barat'",
+    "defaultQuery": "SELECT * FROM hubs;"
+  },
+  {
+    "questionId": "q013",
+    "title": "Pelanggan Pasif",
+    "difficulty": "Intermediate",
+    "businessCase": "Tim CRM ingin mem-blast email retensi ke pelanggan yang mendaftar tapi belum pernah melakukan transaksi sama sekali.",
+    "tables": [
+      {
+        "name": "customers",
+        "createSql": "CREATE TABLE customers (customer_id VARCHAR, name VARCHAR);",
+        "insertSql": "INSERT INTO customers VALUES ('C01', 'Andi'), ('C02', 'Budi'), ('C03', 'Citra');"
+      },
+      {
+        "name": "orders",
+        "createSql": "CREATE TABLE orders (order_id VARCHAR, customer_id VARCHAR);",
+        "insertSql": "INSERT INTO orders VALUES ('O1', 'C01'), ('O2', 'C03');"
+      }
+    ],
+    "referenceQuery": "SELECT c.customer_id, c.name FROM customers c LEFT JOIN orders o ON c.customer_id = o.customer_id WHERE o.order_id IS NULL",
+    "defaultQuery": "SELECT * FROM customers c LEFT JOIN orders o ON c.customer_id = o.customer_id;"
+  },
+  {
+    "questionId": "q014",
+    "title": "Driver Rating Rendah Banyak Order",
+    "difficulty": "Intermediate",
+    "businessCase": "Untuk keperluan coaching, cari driver yang sudah menyelesaikan lebih dari 5 pesanan, tetapi rata-rata ratingnya di bawah 4.0.",
+    "tables": [
+      {
+        "name": "driver_performance",
+        "createSql": "CREATE TABLE driver_performance (driver_id VARCHAR, total_orders INT, avg_rating DECIMAL);",
+        "insertSql": "INSERT INTO driver_performance VALUES ('D01', 10, 4.5), ('D02', 8, 3.8), ('D03', 2, 3.5), ('D04', 15, 3.9);"
+      }
+    ],
+    "referenceQuery": "SELECT driver_id, total_orders, avg_rating FROM driver_performance WHERE total_orders > 5 AND avg_rating < 4.0",
+    "defaultQuery": "SELECT * FROM driver_performance;"
+  },
+  {
+    "questionId": "q015",
+    "title": "Persentase Metode Pembayaran COD",
+    "difficulty": "Intermediate",
+    "businessCase": "Hitung rasio (persentase) transaksi yang menggunakan metode COD dibandingkan total seluruh transaksi.",
+    "tables": [
+      {
+        "name": "payments",
+        "createSql": "CREATE TABLE payments (payment_id VARCHAR, method VARCHAR);",
+        "insertSql": "INSERT INTO payments VALUES ('P1', 'COD'), ('P2', 'Bank Transfer'), ('P3', 'COD'), ('P4', 'E-Wallet');"
+      }
+    ],
+    "referenceQuery": "SELECT (SUM(CASE WHEN method = 'COD' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) AS cod_percentage FROM payments",
+    "defaultQuery": "SELECT * FROM payments;"
+  },
+  {
+    "questionId": "q016",
+    "title": "Rata-rata Waktu Pengiriman per Provinsi",
+    "difficulty": "Intermediate",
+    "businessCase": "Hitung rata-rata waktu yang dibutuhkan (dalam jam) dari barang dikirim (dispatched) hingga diterima (delivered) per provinsi asal hub.",
+    "tables": [
+      {
+        "name": "hubs",
+        "createSql": "CREATE TABLE hubs (hub_id VARCHAR, province VARCHAR);",
+        "insertSql": "INSERT INTO hubs VALUES ('H01', 'DKI Jakarta'), ('H02', 'Jawa Barat');"
+      },
+      {
+        "name": "shipments",
+        "createSql": "CREATE TABLE shipments (shipment_id VARCHAR, hub_id VARCHAR, dispatched_at TIMESTAMP, delivered_at TIMESTAMP);",
+        "insertSql": "INSERT INTO shipments VALUES ('S1', 'H01', '2026-08-01 08:00:00', '2026-08-01 10:00:00'), ('S2', 'H02', '2026-08-01 09:00:00', '2026-08-01 13:00:00');"
+      }
+    ],
+    "referenceQuery": "SELECT h.province, AVG(EXTRACT(EPOCH FROM (s.delivered_at - s.dispatched_at))/3600) as avg_hours FROM hubs h JOIN shipments s ON h.hub_id = s.hub_id GROUP BY h.province",
+    "defaultQuery": "SELECT * FROM hubs h JOIN shipments s ON h.hub_id = s.hub_id;"
+  },
+  {
+    "questionId": "q017",
+    "title": "Kategori Produk Paling Laris",
+    "difficulty": "Intermediate",
+    "businessCase": "Tampilkan nama kategori produk dan total kuantitas barang yang terjual dari kategori tersebut, urutkan dari yang terbanyak.",
+    "tables": [
+      {
+        "name": "categories",
+        "createSql": "CREATE TABLE categories (category_id VARCHAR, category_name VARCHAR);",
+        "insertSql": "INSERT INTO categories VALUES ('C1', 'Elektronik'), ('C2', 'Pakaian');"
+      },
+      {
+        "name": "order_items",
+        "createSql": "CREATE TABLE order_items (item_id VARCHAR, category_id VARCHAR, quantity INT);",
+        "insertSql": "INSERT INTO order_items VALUES ('I1', 'C1', 2), ('I2', 'C1', 1), ('I3', 'C2', 5);"
+      }
+    ],
+    "referenceQuery": "SELECT c.category_name, SUM(o.quantity) as total_sold FROM categories c JOIN order_items o ON c.category_id = o.category_id GROUP BY c.category_name ORDER BY total_sold DESC",
+    "defaultQuery": "SELECT * FROM categories c JOIN order_items o ON c.category_id = o.category_id;"
+  },
+  {
+    "questionId": "q018",
+    "title": "Top 2 Pelanggan Terbesar per Provinsi",
+    "difficulty": "Advance",
+    "businessCase": "Untuk program VIP, cari 2 pelanggan dengan total nilai belanja tertinggi di masing-masing provinsi.",
+    "tables": [
+      {
+        "name": "customer_spending",
+        "createSql": "CREATE TABLE customer_spending (customer_id VARCHAR, province VARCHAR, total_spent INT);",
+        "insertSql": "INSERT INTO customer_spending VALUES ('C1', 'DKI Jakarta', 500000), ('C2', 'DKI Jakarta', 700000), ('C3', 'DKI Jakarta', 200000), ('C4', 'Jawa Barat', 300000), ('C5', 'Jawa Barat', 800000), ('C6', 'Jawa Barat', 600000);"
+      }
+    ],
+    "referenceQuery": "WITH RankedSpending AS (SELECT customer_id, province, total_spent, DENSE_RANK() OVER (PARTITION BY province ORDER BY total_spent DESC) as rank FROM customer_spending) SELECT customer_id, province, total_spent FROM RankedSpending WHERE rank <= 2",
+    "defaultQuery": "SELECT * FROM customer_spending;"
+  },
+  {
+    "questionId": "q019",
+    "title": "Perbandingan Kinerja Pengiriman Driver",
+    "difficulty": "Advance",
+    "businessCase": "Hitung selisih waktu pengiriman setiap order milik seorang driver, dibandingkan dengan rata-rata keseluruhan waktu pengiriman dari driver tersebut secara historis.",
+    "tables": [
+      {
+        "name": "deliveries",
+        "createSql": "CREATE TABLE deliveries (delivery_id VARCHAR, driver_id VARCHAR, delivery_time_mins INT);",
+        "insertSql": "INSERT INTO deliveries VALUES ('DLV1', 'D01', 30), ('DLV2', 'D01', 45), ('DLV3', 'D01', 20), ('DLV4', 'D02', 60), ('DLV5', 'D02', 40);"
+      }
+    ],
+    "referenceQuery": "SELECT delivery_id, driver_id, delivery_time_mins, AVG(delivery_time_mins) OVER (PARTITION BY driver_id) as avg_driver_time, (delivery_time_mins - AVG(delivery_time_mins) OVER (PARTITION BY driver_id)) as difference_from_avg FROM deliveries",
+    "defaultQuery": "SELECT * FROM deliveries;"
+  }
+]
