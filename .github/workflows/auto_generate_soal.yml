@@ -1,0 +1,45 @@
+name: Auto Generate Soal Harian
+
+on:
+  schedule:
+    # Berjalan setiap hari pada jam 00:00 UTC (sekitar jam 07:00 WIB)
+    - cron: '0 0 * * *'
+  
+  # Memungkinkan workflow ini dijalankan secara manual dari tab Actions di GitHub
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-soal:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Versi Node yang stabil
+          
+      - name: Install Dependencies
+        # Hanya menginstal dependensi yang ada di package.json (@google/generative-ai)
+        run: npm install
+
+      - name: Run Generate Soal AI Script
+        # Mengambil API key dari GitHub Secrets
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: npm run generate-soal
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add src/ai_questions.json
+          # Jika ada perubahan (soal baru berhasil digenerate), maka commit dan push
+          git diff --quiet && git diff --staged --quiet || (git commit -m "🤖 Auto-update soal AI harian" && git push)

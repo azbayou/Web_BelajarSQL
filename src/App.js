@@ -2,8 +2,11 @@ import React, { useState, useEffect } from "react";
 import * as duckdb from "@duckdb/duckdb-wasm";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import ReactMarkdown from "react-markdown";
-import questionData from "./question.json";
+import questionDataStatic from "./question.json";
+import aiQuestions from "./ai_questions.json";
 
+// Merge static questions with dynamically generated AI questions
+const questionData = [...questionDataStatic, ...aiQuestions];
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
 
 // Nilai harus sama persis dengan field "difficulty" di question.json
