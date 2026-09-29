@@ -10,7 +10,7 @@ import aiQuestions from "./ai_questions.json";
 
 // Merge static questions with dynamically generated AI questions
 const [dynamicQuestions, setDynamicQuestions] = useState([...questionDataStatic, ...aiQuestions]);
-const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
+const GEMINI_API_KEY = import.meta.env ? import.meta.env.VITE_GEMINI_API_KEY : process.env.REACT_APP_GEMINI_API_KEY;
 
 // Nilai harus sama persis dengan field "difficulty" di question.json
 const DIFFICULTIES = ["Beginner", "Intermediate", "Advance"];
@@ -308,7 +308,7 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
     return response.text();
   };
 
-  const handleRefreshSoal = async () => {
+    const handleRefreshSoal = async () => {
     if (!GEMINI_API_KEY) {
       alert("API Key Kosong! Cek Environment Variable.");
       return;
@@ -322,22 +322,20 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({ model: "gemini-2.1-pro" });
 
-      const promptText = 
-        Buatkan 1 soal SQL baru untuk level  + "" +  dengan format JSON murni.
-        Formatnya harus persis seperti ini (hanya JSON array tanpa markdown):
-        [{
-          "questionId": "ai_ + "" + ",
-          "title": "Soal Baru: [Judul Bebas]",
-          "difficulty": " + "" + ",
-          "businessCase": "Deskripsi studi kasus.",
-          "tables": [ { "name": "...", "createSql": "CREATE TABLE ...;" } ],
-          "referenceQuery": "SELECT ...;"
-        }]
-      ;
+      const promptText = `Buatkan 1 soal SQL baru untuk level ${difficulty} dengan format JSON murni.
+Formatnya harus persis seperti ini (hanya JSON array tanpa markdown):
+[{
+  "questionId": "ai_${Date.now()}",
+  "title": "Soal Baru: [Judul Bebas]",
+  "difficulty": "${difficulty}",
+  "businessCase": "Deskripsi studi kasus.",
+  "tables": [ { "name": "...", "createSql": "CREATE TABLE ...;" } ],
+  "referenceQuery": "SELECT ...;"
+}]`;
 
       const result = await model.generateContent(promptText);
       let text = await result.response.text();
-      text = text.replace(/`json/g, "").replace(/`/g, "").trim();
+      text = text.replace(/```json/g, "").replace(/```/g, "").trim();
       
       const newQuestions = JSON.parse(text);
       if (newQuestions && newQuestions.length > 0) {
@@ -727,6 +725,8 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
 // Trigger Vercel rebuild for env var
 
 // Trigger rebuild for new project env var
+
+
 
 
 
