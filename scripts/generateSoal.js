@@ -15,7 +15,7 @@ if (!API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.1-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-pro-latest" });
 
 async function generateSoal() {
   console.log(`[${new Date().toLocaleString()}] Memulai proses generate soal SQL AI...`);
