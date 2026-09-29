@@ -658,3 +658,5 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
   );
 }
 // Trigger Vercel rebuild for env var
+
+// Trigger rebuild for new project env var
