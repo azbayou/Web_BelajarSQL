@@ -106,7 +106,17 @@ const parseColumns = (createSql) => {
 };
 
 export default function App() {
-  const [dynamicQuestions, setDynamicQuestions] = useState([...questionDataStatic, ...aiQuestions]);
+  const [dynamicQuestions, setDynamicQuestions] = useState(() => {
+    try {
+      const saved = localStorage.getItem("savedQuestions");
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return [...questionDataStatic, ...aiQuestions];
+  });
+  
+  useEffect(() => {
+    localStorage.setItem("savedQuestions", JSON.stringify(dynamicQuestions));
+  }, [dynamicQuestions]);
   // ---------- State UI ----------
   const [activeTab, setActiveTab] = useState("SOAL");
   const [difficulty, setDifficulty] = useState(FIRST_QUESTION.difficulty);
@@ -319,15 +329,15 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
     setIsAiLoading(true);
     setAiResponse("Sedang men-generate soal baru dengan AI (mencoba Gemini)...");
 
-    const promptText = `Buatkan 10 soal SQL baru untuk level ${difficulty} dengan format JSON murni.
-Formatnya harus persis berupa JSON array berisi 10 object tanpa markdown blok sama sekali. Pastikan setiap soal memiliki "questionId" yang unik, misal ai_1, ai_2, dst.
-Contoh struktur 1 soal (buat 10 seperti ini dalam array):
+    const promptText = `Buatkan 5 soal SQL baru untuk level ${difficulty} dengan format JSON murni.
+berupa JSON array berisi 5 object tanpa markdown blok sama sekali. Pastikan setiap soal memiliki "questionId" yang unik, misal ai_1, ai_2, dst
+Contoh struktur 1 soal (buat 5 seperti ini dalam array):
 [{
   "questionId": "ai_unique_id_1",
   "title": "Soal Baru: [Judul Bebas]",
   "difficulty": "${difficulty}",
   "businessCase": "Deskripsi studi kasus unik.",
-  "tables": [ { "name": "...", "createSql": "CREATE TABLE ...;", "insertSql": "INSERT INTO ... VALUES (...), (...);" } ],
+  "tables": [ { "name": "...", "createSql": "CREATE TABLE ...;", "insertSql": "INSERT INTO ... VALUES (...);" } ],
   "referenceQuery": "SELECT ...;"
 }]`;
 
@@ -368,15 +378,30 @@ Contoh struktur 1 soal (buat 10 seperti ini dalam array):
     }
 
     try {
-      text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-      const newQuestions = JSON.parse(text);
+      // Robust JSON Extraction using JS regex
+      const match = text.match(/\[[\s\S]*\]/);
+      if (!match) throw new Error("JSON Array tidak ditemukan di dalam output AI");
+      const jsonText = match[0];
+      const newQuestions = JSON.parse(jsonText);
       if (newQuestions && newQuestions.length > 0) {
-        setDynamicQuestions(newQuestions);
+        setDynamicQuestions((prev) => {
+          const merged = [...newQuestions, ...prev];
+          // remove duplicates by id if any
+          const unique = [];
+          const seen = new Set();
+          for(const q of merged) {
+            if(!seen.has(q.questionId)) {
+              seen.add(q.questionId);
+              unique.push(q);
+            }
+          }
+          return unique;
+        });
         setCurrentId(newQuestions[0].questionId);
         setShowAiModal(false);
       }
     } catch (parseErr) {
-      setAiResponse("Gagal membaca format JSON dari AI. Coba klik refresh lagi.");
+      setAiResponse("Gagal membaca format JSON dari AI. Silakan coba klik refresh lagi.");
     } finally {
       setIsQuestionLoading(false);
       setIsAiLoading(false);
