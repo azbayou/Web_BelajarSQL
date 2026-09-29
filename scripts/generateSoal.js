@@ -49,8 +49,28 @@ Setiap objek soal harus memiliki struktur berikut secara persis karena akan dima
 Pastikan semua nilai syntax valid, tanda kutip benar, insert data cukup representatif untuk di-test, dan output Anda bisa langsung di-parse oleh JSON.parse().`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
+    let responseText = "";
+    try {
+      const result = await model.generateContent(prompt);
+      responseText = result.response.text();
+    } catch (err) {
+      console.warn(`[${new Date().toLocaleString()}] Gemini gagal (${err.message}), beralih ke GROQ...`);
+      if (process.env.GROQ_API_KEY) {
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${process.env.GROQ_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "openai/gpt-oss-120b",
+            messages: [{ role: "user", content: prompt }]
+          })
+        });
+        const data = await res.json();
+        if(data.error) throw new Error(data.error.message);
+        responseText = data.choices[0].message.content;
+      } else {
+        throw err;
+      }
+    }
     
     const cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     const questions = JSON.parse(cleanText);
