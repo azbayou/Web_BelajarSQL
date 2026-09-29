@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "keywords": [],
-  "main": "src/index.js",
+  "main": "src/index.jsx",
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -33,3 +33,4 @@
     "not op_mini all"
   ]
 }
+
