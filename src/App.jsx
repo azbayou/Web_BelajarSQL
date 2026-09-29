@@ -322,8 +322,8 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
-      const promptText = `Buatkan 1 soal SQL baru untuk level ${difficulty} dengan format JSON murni.
-Formatnya harus persis seperti ini (hanya JSON array tanpa markdown):
+      const promptText = `Buatkan 10 soal SQL baru untuk level ${difficulty} dengan format JSON murni.
+Formatnya harus persis seperti ini (berupa JSON array berisi 10 object tanpa markdown blok sama sekali. Pastikan setiap soal memiliki "questionId" yang unik, misal ai_1, ai_2, dst):
 [{
   "questionId": "ai_${Date.now()}",
   "title": "Soal Baru: [Judul Bebas]",
