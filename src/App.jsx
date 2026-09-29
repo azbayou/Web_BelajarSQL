@@ -316,11 +316,11 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
     setIsQuestionLoading(true);
     setShowAiModal(true);
     setIsAiLoading(true);
-    setAiResponse("Sedang men-generate soal baru dengan AI (gemini-2.1-pro)...");
+    setAiResponse("Sedang men-generate soal baru dengan AI (gemini-flash-latest)...");
 
     try {
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.1-pro" });
+      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
       const promptText = `Buatkan 1 soal SQL baru untuk level ${difficulty} dengan format JSON murni.
 Formatnya harus persis seperti ini (hanya JSON array tanpa markdown):
