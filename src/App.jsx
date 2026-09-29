@@ -10,7 +10,7 @@ import aiQuestions from "./ai_questions.json";
 
 // Merge static questions with dynamically generated AI questions
 const questionData = [...questionDataStatic, ...aiQuestions];
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
 
 // Nilai harus sama persis dengan field "difficulty" di question.json
 const DIFFICULTIES = ["Beginner", "Intermediate", "Advance"];
