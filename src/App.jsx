@@ -8,8 +8,6 @@ import { vscodeDark } from '@uiw/codemirror-theme-vscode';
 import questionDataStatic from "./question.json";
 import aiQuestions from "./ai_questions.json";
 
-// Merge static questions with dynamically generated AI questions
-const [dynamicQuestions, setDynamicQuestions] = useState([...questionDataStatic, ...aiQuestions]);
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 // Nilai harus sama persis dengan field "difficulty" di question.json
@@ -106,6 +104,7 @@ const parseColumns = (createSql) => {
 };
 
 export default function App() {
+  const [dynamicQuestions, setDynamicQuestions] = useState([...questionDataStatic, ...aiQuestions]);
   // ---------- State UI ----------
   const [activeTab, setActiveTab] = useState("SOAL");
   const [difficulty, setDifficulty] = useState(FIRST_QUESTION.difficulty);
@@ -725,6 +724,7 @@ Formatnya harus persis seperti ini (hanya JSON array tanpa markdown):
 // Trigger Vercel rebuild for env var
 
 // Trigger rebuild for new project env var
+
 
 
 
