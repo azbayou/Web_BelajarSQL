@@ -9,7 +9,7 @@ import questionDataStatic from "./question.json";
 import aiQuestions from "./ai_questions.json";
 
 // Merge static questions with dynamically generated AI questions
-const questionData = [...questionDataStatic, ...aiQuestions];
+const [dynamicQuestions, setDynamicQuestions] = useState([...questionDataStatic, ...aiQuestions]);
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
 
 // Nilai harus sama persis dengan field "difficulty" di question.json
@@ -137,7 +137,7 @@ export default function App() {
   // ---------- Turunan ----------
   const currentQuestion =
     questionData.find((q) => q.questionId === currentId) || questionData[0];
-  const filteredQuestions = questionData.filter(
+  const filteredQuestions = dynamicQuestions.filter(
     (q) => q.difficulty === difficulty
   );
 
@@ -308,6 +308,52 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
     return response.text();
   };
 
+  const handleRefreshSoal = async () => {
+    if (!GEMINI_API_KEY) {
+      alert("API Key Kosong! Cek Environment Variable.");
+      return;
+    }
+    setIsQuestionLoading(true);
+    setShowAiModal(true);
+    setIsAiLoading(true);
+    setAiResponse("Sedang men-generate soal baru dengan AI (gemini-2.1-pro)...");
+
+    try {
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.1-pro" });
+
+      const promptText = 
+        Buatkan 1 soal SQL baru untuk level  + "" +  dengan format JSON murni.
+        Formatnya harus persis seperti ini (hanya JSON array tanpa markdown):
+        [{
+          "questionId": "ai_ + "" + ",
+          "title": "Soal Baru: [Judul Bebas]",
+          "difficulty": " + "" + ",
+          "businessCase": "Deskripsi studi kasus.",
+          "tables": [ { "name": "...", "createSql": "CREATE TABLE ...;" } ],
+          "referenceQuery": "SELECT ...;"
+        }]
+      ;
+
+      const result = await model.generateContent(promptText);
+      let text = await result.response.text();
+      text = text.replace(/`json/g, "").replace(/`/g, "").trim();
+      
+      const newQuestions = JSON.parse(text);
+      if (newQuestions && newQuestions.length > 0) {
+        setDynamicQuestions(newQuestions);
+        setCurrentId(newQuestions[0].questionId);
+        setShowAiModal(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setAiResponse("Gagal generate soal baru: " + err.message);
+    } finally {
+      setIsQuestionLoading(false);
+      setIsAiLoading(false);
+    }
+  };
+
   const handleTanyaAI = async () => {
     if (!GEMINI_API_KEY) {
       alert(
@@ -447,6 +493,15 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
             🔀 Soal Acak ({difficulty})
           </button>
 
+          <button
+            onClick={handleRefreshSoal}
+            disabled={isQuestionLoading}
+            className="btn-random"
+            style={{ marginTop: "10px", backgroundColor: "#007bff", color: "white" }}
+          >
+            ?? Refresh Soal Baru (AI)
+          </button>
+
           <hr className="divider" />
 
           <h2 className="question-title">{currentQuestion.title}</h2>
@@ -525,7 +580,11 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
         </div>
 
         {/* ---------- Panel kanan: editor & hasil ---------- */}
-        <div className="panel-right">
+                <div className="panel-right">
+          <div className="desktop-tabs" style={{display: 'flex', background: '#fff', borderBottom: '1px solid #e5e7eb'}}>
+            <button onClick={() => setActiveTab("SQL")} className={tabClass("SQL")} style={{flex: 1, padding: '10px', border: 'none', background: activeTab !== "SINTAKS" ? '#e0f2fe' : 'transparent', cursor: 'pointer', fontWeight: 'bold'}}>💻 Tulis SQL</button>
+            <button onClick={() => setActiveTab("SINTAKS")} className={tabClass("SINTAKS")} style={{flex: 1, padding: '10px', border: 'none', background: activeTab === "SINTAKS" ? '#e0f2fe' : 'transparent', cursor: 'pointer', fontWeight: 'bold'}}>📓 Index Query (Sintaks)</button>
+          </div>
           {activeTab === "SINTAKS" ? (
             <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%", backgroundColor: "#1e1e1e" }}>
               <div className="editor-header" style={{ padding: "0.5rem 1rem", borderBottom: "1px solid #333", color: "#ccc", fontWeight: "bold" }}>
@@ -597,7 +656,7 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
       {/* ---------- Footer ---------- */}
       <footer className="footer">
                 <button onClick={handleTanyaAI} className="btn-ai">
-          ?? Tanya AI
+          ? Tanya AI
         </button>
         <button
           onClick={() => {
