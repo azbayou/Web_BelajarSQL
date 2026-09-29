@@ -8,14 +8,15 @@ import { vscodeDark } from '@uiw/codemirror-theme-vscode';
 import questionDataStatic from "./question.json";
 import aiQuestions from "./ai_questions.json";
 
+const questionData = [...questionDataStatic, ...aiQuestions];
+
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 // Nilai harus sama persis dengan field "difficulty" di question.json
 const DIFFICULTIES = ["Beginner", "Intermediate", "Advance"];
 const diffKey = (level) => level.toLowerCase();
 
-const FIRST_QUESTION =
-  questionData.find((q) => q.difficulty === "Beginner") || questionData[0];
+const FIRST_QUESTION = questionData.find((q) => q.difficulty === "Beginner") || questionData[0];
 
 // Komponen render untuk ReactMarkdown (react-markdown v9 tidak punya prop `inline`,
 // jadi blok kode dideteksi lewat className "language-xxx" atau adanya baris baru)
@@ -135,7 +136,7 @@ export default function App() {
 
   // ---------- Turunan ----------
   const currentQuestion =
-    questionData.find((q) => q.questionId === currentId) || questionData[0];
+    dynamicQuestions.find((q) => q.questionId === currentId) || dynamicQuestions[0];
   const filteredQuestions = dynamicQuestions.filter(
     (q) => q.difficulty === difficulty
   );
@@ -240,7 +241,7 @@ export default function App() {
   // ---------- Handler: pilih difficulty / soal ----------
   const handleChangeDifficulty = (level) => {
     setDifficulty(level);
-    const first = questionData.find((q) => q.difficulty === level);
+    const first = dynamicQuestions.find((q) => q.difficulty === level);
     if (first) setCurrentId(first.questionId);
   };
 
@@ -724,6 +725,7 @@ Formatnya harus persis seperti ini (hanya JSON array tanpa markdown):
 // Trigger Vercel rebuild for env var
 
 // Trigger rebuild for new project env var
+
 
 
 
