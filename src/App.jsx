@@ -353,14 +353,12 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
         setAiResponse(
           "🎉 **BENAR SEKALI!**\n\nHasil tabelmu sudah sama persis dengan yang diharapkan. Kamu sudah memahami konsep ini dengan baik."
         );
-      } else if (!GEMINI_API_KEY) {
+      } else {
         setAiResponse(
           "❌ **Belum sesuai.**\n\nHasil tabelmu belum sama dengan yang diharapkan. Cek lagi kolom, urutan, dan kondisi filter-mu."
-        );
-      } else {
-        setAiResponse(await askTutor());
-      }
-    } catch (err) {
+          );
+        }
+      } catch (err) {
       setAiResponse(
         `❌ **Terdapat Error Sintaks SQL:**\n\n\`${err.message}\`\n\nCoba periksa lagi penulisanmu.`
       );
@@ -598,8 +596,18 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
 
       {/* ---------- Footer ---------- */}
       <footer className="footer">
-        <button onClick={handleTanyaAI} className="btn-ai">
-          ✨ Tanya AI
+                <button onClick={handleTanyaAI} className="btn-ai">
+          ?? Tanya AI
+        </button>
+        <button
+          onClick={() => {
+            setAiResponse("Kunci Jawaban:\n\n`sql\n" + currentQuestion.referenceQuery + "\n`");
+            setShowAiModal(true);
+          }}
+          className="btn-ai"
+          style={{ backgroundColor: "#f39c12", marginLeft: "10px" }}
+        >
+          ?? Cheat Code
         </button>
         <button
           onClick={handleRunQuery}
@@ -660,3 +668,12 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
 // Trigger Vercel rebuild for env var
 
 // Trigger rebuild for new project env var
+
+
+
+
+
+
+
+
+
