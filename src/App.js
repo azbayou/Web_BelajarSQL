@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import * as duckdb from "@duckdb/duckdb-wasm";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import ReactMarkdown from "react-markdown";
+import CodeMirror from '@uiw/react-codemirror';
+import { sql } from '@codemirror/lang-sql';
+import { vscodeDark } from '@uiw/codemirror-theme-vscode';
 import questionDataStatic from "./question.json";
 import aiQuestions from "./ai_questions.json";
 
@@ -109,6 +112,14 @@ export default function App() {
   const [currentId, setCurrentId] = useState(FIRST_QUESTION.questionId);
   const [openTables, setOpenTables] = useState({}); // { namaTabel: true/false }
   const [expectedRows, setExpectedRows] = useState(null); // hasil referenceQuery
+  const [sqlSyntaxText, setSqlSyntaxText] = useState("");
+
+  useEffect(() => {
+    fetch('/index_sql_sintaks.txt')
+      .then(res => res.text())
+      .then(text => setSqlSyntaxText(text))
+      .catch(err => console.error("Gagal memuat sintaks:", err));
+  }, []);
 
   // ---------- State database & editor ----------
   const [conn, setConn] = useState(null);
@@ -382,6 +393,9 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
         <button onClick={() => setActiveTab("SOAL")} className={tabClass("SOAL")}>
           📖 Soal & Data
         </button>
+        <button onClick={() => setActiveTab("SINTAKS")} className={tabClass("SINTAKS")}>
+          📘 Sintaks SQL
+        </button>
         <button onClick={() => setActiveTab("SQL")} className={tabClass("SQL")}>
           💻 Tulis SQL
         </button>
@@ -514,15 +528,33 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
 
         {/* ---------- Panel kanan: editor & hasil ---------- */}
         <div className="panel-right">
-          <div className={`editor-pane${activeTab === "SQL" ? " active" : ""}`}>
-            <div className="editor-header">SQL Editor (DuckDB)</div>
-            <textarea
-              className="sql-textarea"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              spellCheck={false}
-            />
-          </div>
+          {activeTab === "SINTAKS" ? (
+            <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%", backgroundColor: "#1e1e1e" }}>
+              <div className="editor-header" style={{ padding: "0.5rem 1rem", borderBottom: "1px solid #333", color: "#ccc", fontWeight: "bold" }}>
+                📘 Referensi Sintaks SQL (Bisa diedit di /public/index_sql_sintaks.txt)
+              </div>
+              <div style={{ flex: 1, overflow: "auto" }}>
+                <CodeMirror
+                  value={sqlSyntaxText}
+                  height="100%"
+                  extensions={[sql()]}
+                  theme={vscodeDark}
+                  readOnly={true}
+                  editable={false}
+                />
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className={`editor-pane${activeTab === "SQL" ? " active" : ""}`}>
+                <div className="editor-header">SQL Editor (DuckDB)</div>
+                <textarea
+                  className="sql-textarea"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  spellCheck={false}
+                />
+              </div>
 
           <div
             className={`result-pane${activeTab === "HASIL" ? " active" : ""}`}
@@ -559,6 +591,8 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
               )}
             </div>
           </div>
+            </>
+          )}
         </div>
       </main>
 
