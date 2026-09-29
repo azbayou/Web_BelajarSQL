@@ -327,7 +327,7 @@ Contoh struktur 1 soal (buat 10 seperti ini dalam array):
   "title": "Soal Baru: [Judul Bebas]",
   "difficulty": "${difficulty}",
   "businessCase": "Deskripsi studi kasus unik.",
-  "tables": [ { "name": "...", "createSql": "CREATE TABLE ...;" } ],
+  "tables": [ { "name": "...", "createSql": "CREATE TABLE ...;", "insertSql": "INSERT INTO ... VALUES (...), (...);" } ],
   "referenceQuery": "SELECT ...;"
 }]`;
 
