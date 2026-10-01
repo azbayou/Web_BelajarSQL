@@ -7,6 +7,7 @@ import { sql } from '@codemirror/lang-sql';
 import { vscodeDark } from '@uiw/codemirror-theme-vscode';
 import questionDataStatic from "./question.json";
 import aiQuestions from "./ai_questions.json";
+import { dummyTables } from "./dummy_db.js";
 
 const questionData = [...questionDataStatic, ...aiQuestions];
 
@@ -329,15 +330,21 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
     setIsAiLoading(true);
     setAiResponse("Sedang men-generate soal baru dengan AI (mencoba Gemini)...");
 
+    const schemaText = dummyTables.map(t => t.createSql).join("\n");
     const promptText = `Buatkan 5 soal SQL baru untuk level ${difficulty} dengan format JSON murni.
-berupa JSON array berisi 5 object tanpa markdown blok sama sekali. Pastikan setiap soal memiliki "questionId" yang unik, misal ai_1, ai_2, dst
+Soal harus menggunakan HANYA skema tabel berikut ini:
+${schemaText}
+
+TIDAK BOLEH membuat tabel baru. Gunakan tabel yang ada di atas saja.
+Berupa JSON array berisi 5 object tanpa markdown blok sama sekali. Pastikan setiap soal memiliki "questionId" yang unik, misal ai_1, ai_2, dst.
+TIDAK PERLU menyertakan property "tables" pada output JSON, cukup kembalikan format berikut.
+
 Contoh struktur 1 soal (buat 5 seperti ini dalam array):
 [{
   "questionId": "ai_unique_id_1",
   "title": "Soal Baru: [Judul Bebas]",
   "difficulty": "${difficulty}",
   "businessCase": "Deskripsi studi kasus unik.",
-  "tables": [ { "name": "...", "createSql": "CREATE TABLE ...;", "insertSql": "INSERT INTO ... VALUES (...);" } ],
   "referenceQuery": "SELECT ...;"
 }]`;
 
@@ -382,7 +389,8 @@ Contoh struktur 1 soal (buat 5 seperti ini dalam array):
       const match = text.match(/\[[\s\S]*\]/);
       if (!match) throw new Error("JSON Array tidak ditemukan di dalam output AI");
       const jsonText = match[0];
-      const newQuestions = JSON.parse(jsonText);
+      const parsed = JSON.parse(jsonText);
+      const newQuestions = parsed.map(q => ({ ...q, tables: dummyTables, defaultQuery: "SELECT * FROM users;" }));
       if (newQuestions && newQuestions.length > 0) {
         setDynamicQuestions((prev) => {
           const merged = [...newQuestions, ...prev];
