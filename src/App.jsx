@@ -119,6 +119,13 @@ export default function App() {
     localStorage.setItem("savedQuestions", JSON.stringify(dynamicQuestions));
   }, [dynamicQuestions]);
   // ---------- State UI ----------
+  const [solvedQuestions, setSolvedQuestions] = useState(() => {
+    try {
+      const saved = localStorage.getItem("solvedQuestions");
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return {};
+  });
   const [activeTab, setActiveTab] = useState("SOAL");
   const [difficulty, setDifficulty] = useState(FIRST_QUESTION.difficulty);
   const [currentId, setCurrentId] = useState(FIRST_QUESTION.questionId);
@@ -335,12 +342,7 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
 Soal harus menggunakan HANYA skema tabel berikut ini:
 ${schemaText}
 
-ATURAN SANGAT PENTING:
-1. TIDAK BOLEH membuat tabel baru. Gunakan HANYA tabel yang ada di atas.
-2. JANGAN menggunakan fungsi spesifik (seperti json_each, dll). Gunakan hanya standar ANSI SQL dasar (SELECT, JOIN, WHERE, GROUP BY, HAVING, ORDER BY, dll).
-3. Pastikan kolom yang di-query benar-benar ada di CREATE TABLE di atas. Jangan mengarang nama kolom.
-4. Aturan agregasi (GROUP BY) harus benar secara sintaks SQL: Semua kolom non-agregasi di SELECT harus ada di GROUP BY!
-
+TIDAK BOLEH membuat tabel baru. Gunakan tabel yang ada di atas saja.
 Berupa JSON array berisi 5 object tanpa markdown blok sama sekali. Pastikan setiap soal memiliki "questionId" yang unik, misal ai_1, ai_2, dst.
 TIDAK PERLU menyertakan property "tables" pada output JSON, cukup kembalikan format berikut.
 
@@ -398,7 +400,9 @@ Contoh struktur 1 soal (buat 5 seperti ini dalam array):
       const newQuestions = parsed.map(q => ({ ...q, tables: dummyTables, defaultQuery: "SELECT * FROM users;" }));
       if (newQuestions && newQuestions.length > 0) {
         setDynamicQuestions((prev) => {
-          const merged = [...newQuestions, ...prev];
+          // Hapus soal yang sudah diselesaikan
+          const unsolved = prev.filter(q => !solvedQuestions[q.questionId]);
+          const merged = [...newQuestions, ...unsolved];
           // remove duplicates by id if any
           const unique = [];
           const seen = new Set();
@@ -463,6 +467,9 @@ Contoh struktur 1 soal (buat 5 seperti ini dalam array):
       const isCorrect = serialize(userRows) === serialize(refRows);
 
       if (isCorrect) {
+        const newSolved = { ...solvedQuestions, [currentId]: true };
+        setSolvedQuestions(newSolved);
+        localStorage.setItem("solvedQuestions", JSON.stringify(newSolved));
         setAiResponse(
           "🎉 **BENAR SEKALI!**\n\nHasil tabelmu sudah sama persis dengan yang diharapkan. Kamu sudah memahami konsep ini dengan baik."
         );
@@ -537,19 +544,20 @@ Contoh struktur 1 soal (buat 5 seperti ini dalam array):
           </div>
 
           {/* Daftar soal sesuai difficulty */}
-          <div className="question-list">
-            {filteredQuestions.map((q, i) => (
-              <button
-                key={q.questionId}
-                disabled={isQuestionLoading}
-                onClick={() => handleSelectQuestion(q.questionId)}
-                className={`question-item${
-                  q.questionId === currentId ? " active" : ""
-                }`}
-              >
-                {i + 1}. {q.title}
-              </button>
-            ))}
+                    <div className="question-list" style={{ margin: "10px 0" }}>
+            <select
+              value={currentId}
+              onChange={(e) => handleSelectQuestion(e.target.value)}
+              disabled={isQuestionLoading}
+              className="question-dropdown"
+              style={{ width: "100%", padding: "10px", borderRadius: "5px", border: "1px solid #ccc", fontSize: "16px", cursor: "pointer", backgroundColor: "#f8f9fa", outline: "none" }}
+            >
+              {filteredQuestions.map((q, i) => (
+                <option key={q.questionId} value={q.questionId}>
+                  {solvedQuestions[q.questionId] ? "✅ " : ""}{i + 1}. {q.title}
+                </option>
+              ))}
+            </select>
           </div>
 
           <button
