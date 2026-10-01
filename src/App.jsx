@@ -119,13 +119,6 @@ export default function App() {
     localStorage.setItem("savedQuestions", JSON.stringify(dynamicQuestions));
   }, [dynamicQuestions]);
   // ---------- State UI ----------
-  const [solvedQuestions, setSolvedQuestions] = useState(() => {
-    try {
-      const saved = localStorage.getItem("solvedQuestions");
-      if (saved) return JSON.parse(saved);
-    } catch(e) {}
-    return {};
-  });
   const [activeTab, setActiveTab] = useState("SOAL");
   const [difficulty, setDifficulty] = useState(FIRST_QUESTION.difficulty);
   const [currentId, setCurrentId] = useState(FIRST_QUESTION.questionId);
@@ -397,12 +390,37 @@ Contoh struktur 1 soal (buat 5 seperti ini dalam array):
       if (!match) throw new Error("JSON Array tidak ditemukan di dalam output AI");
       const jsonText = match[0];
       const parsed = JSON.parse(jsonText);
-      const newQuestions = parsed.map(q => ({ ...q, tables: dummyTables, defaultQuery: "SELECT * FROM users;" }));
-      if (newQuestions && newQuestions.length > 0) {
+      const newQuestionsRaw = parsed.map(q => ({ ...q, tables: dummyTables, defaultQuery: "SELECT * FROM users;" }));
+      
+      // Filter out invalid queries (empty results)
+      const validQuestions = [];
+      if (conn) {
+        // Load dummy tables into current conn to verify queries
+        for (const table of dummyTables) {
+          await conn.query(`DROP TABLE IF EXISTS "${table.name}"`);
+          await conn.query(table.createSql);
+          await conn.query(table.insertSql);
+        }
+        for (const q of newQuestionsRaw) {
+          try {
+            const res = await conn.query(q.referenceQuery);
+            const r = rowsFromResult(res);
+            if (r.length > 0) {
+              validQuestions.push(q);
+            }
+          } catch(e) {
+            console.warn("AI query invalid:", e);
+          }
+        }
+      } else {
+        validQuestions.push(...newQuestionsRaw);
+      }
+      
+      if (validQuestions.length > 0) {
         setDynamicQuestions((prev) => {
           // Hapus soal yang sudah diselesaikan
           const unsolved = prev.filter(q => !solvedQuestions[q.questionId]);
-          const merged = [...newQuestions, ...unsolved];
+          const merged = [...validQuestions, ...unsolved];
           // remove duplicates by id if any
           const unique = [];
           const seen = new Set();
@@ -414,8 +432,11 @@ Contoh struktur 1 soal (buat 5 seperti ini dalam array):
           }
           return unique;
         });
-        setCurrentId(newQuestions[0].questionId);
+        setCurrentId(validQuestions[0].questionId);
         setShowAiModal(false);
+      } else {
+        setAiResponse("AI gagal membuat soal yang valid dengan data yang ada. Silakan coba klik refresh lagi.");
+        return;
       }
     } catch (parseErr) {
       setAiResponse("Gagal membaca format JSON dari AI. Silakan coba klik refresh lagi.");
@@ -467,9 +488,6 @@ Contoh struktur 1 soal (buat 5 seperti ini dalam array):
       const isCorrect = serialize(userRows) === serialize(refRows);
 
       if (isCorrect) {
-        const newSolved = { ...solvedQuestions, [currentId]: true };
-        setSolvedQuestions(newSolved);
-        localStorage.setItem("solvedQuestions", JSON.stringify(newSolved));
         setAiResponse(
           "🎉 **BENAR SEKALI!**\n\nHasil tabelmu sudah sama persis dengan yang diharapkan. Kamu sudah memahami konsep ini dengan baik."
         );
@@ -544,20 +562,19 @@ Contoh struktur 1 soal (buat 5 seperti ini dalam array):
           </div>
 
           {/* Daftar soal sesuai difficulty */}
-                    <div className="question-list" style={{ margin: "10px 0" }}>
-            <select
-              value={currentId}
-              onChange={(e) => handleSelectQuestion(e.target.value)}
-              disabled={isQuestionLoading}
-              className="question-dropdown"
-              style={{ width: "100%", padding: "10px", borderRadius: "5px", border: "1px solid #ccc", fontSize: "16px", cursor: "pointer", backgroundColor: "#f8f9fa", outline: "none" }}
-            >
-              {filteredQuestions.map((q, i) => (
-                <option key={q.questionId} value={q.questionId}>
-                  {solvedQuestions[q.questionId] ? "✅ " : ""}{i + 1}. {q.title}
-                </option>
-              ))}
-            </select>
+          <div className="question-list">
+            {filteredQuestions.map((q, i) => (
+              <button
+                key={q.questionId}
+                disabled={isQuestionLoading}
+                onClick={() => handleSelectQuestion(q.questionId)}
+                className={`question-item${
+                  q.questionId === currentId ? " active" : ""
+                }`}
+              >
+                {i + 1}. {q.title}
+              </button>
+            ))}
           </div>
 
           <button
