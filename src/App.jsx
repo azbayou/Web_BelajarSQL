@@ -119,6 +119,13 @@ export default function App() {
     localStorage.setItem("savedQuestions", JSON.stringify(dynamicQuestions));
   }, [dynamicQuestions]);
   // ---------- State UI ----------
+  const [solvedQuestions, setSolvedQuestions] = useState(() => {
+    try {
+      const saved = localStorage.getItem("solvedQuestions");
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return {};
+  });
   const [activeTab, setActiveTab] = useState("SOAL");
   const [difficulty, setDifficulty] = useState(FIRST_QUESTION.difficulty);
   const [currentId, setCurrentId] = useState(FIRST_QUESTION.questionId);
@@ -562,19 +569,20 @@ Contoh struktur 1 soal (buat 5 seperti ini dalam array):
           </div>
 
           {/* Daftar soal sesuai difficulty */}
-          <div className="question-list">
-            {filteredQuestions.map((q, i) => (
-              <button
-                key={q.questionId}
-                disabled={isQuestionLoading}
-                onClick={() => handleSelectQuestion(q.questionId)}
-                className={`question-item${
-                  q.questionId === currentId ? " active" : ""
-                }`}
-              >
-                {i + 1}. {q.title}
-              </button>
-            ))}
+          <div className="question-list" style={{ margin: "10px 0" }}>
+            <select
+              value={currentId}
+              onChange={(e) => handleSelectQuestion(e.target.value)}
+              disabled={isQuestionLoading}
+              className="question-dropdown"
+              style={{ width: "100%", padding: "10px", borderRadius: "5px", border: "1px solid #ccc", fontSize: "16px", cursor: "pointer", backgroundColor: "#f8f9fa", outline: "none" }}
+            >
+              {filteredQuestions.map((q, i) => (
+                <option key={q.questionId} value={q.questionId}>
+                  {solvedQuestions[q.questionId] ? "✅ " : ""}{i + 1}. {q.title}
+                </option>
+              ))}
+            </select>
           </div>
 
           <button
