@@ -397,7 +397,12 @@ Contoh struktur 1 soal (buat 5 seperti ini dalam array):
       if (!match) throw new Error("JSON Array tidak ditemukan di dalam output AI");
       const jsonText = match[0];
       const parsed = JSON.parse(jsonText);
-      const newQuestionsRaw = parsed.map(q => ({ ...q, tables: dummyTables, defaultQuery: "SELECT * FROM users;" }));
+      const newQuestionsRaw = parsed.map((q, idx) => ({ 
+        ...q, 
+        questionId: `ai_${Date.now()}_${idx}`,
+        tables: dummyTables, 
+        defaultQuery: "SELECT * FROM users;" 
+      }));
       
       // Filter out invalid queries (empty results)
       const validQuestions = [];
