@@ -335,7 +335,11 @@ Berikan HINT atau evaluasi atas sintaksnya. JANGAN berikan jawaban kode SQL seca
 Soal harus menggunakan HANYA skema tabel berikut ini:
 ${schemaText}
 
-TIDAK BOLEH membuat tabel baru. Gunakan tabel yang ada di atas saja.
+ATURAN SANGAT PENTING:
+1. TIDAK BOLEH membuat tabel baru. Gunakan HANYA tabel yang ada di atas.
+2. JANGAN menggunakan fungsi spesifik (seperti json_each, dll). Gunakan hanya standar ANSI SQL dasar (SELECT, JOIN, WHERE, GROUP BY, HAVING, ORDER BY, dll).
+3. Pastikan kolom yang di-query benar-benar ada di CREATE TABLE di atas. Jangan mengarang nama kolom.
+
 Berupa JSON array berisi 5 object tanpa markdown blok sama sekali. Pastikan setiap soal memiliki "questionId" yang unik, misal ai_1, ai_2, dst.
 TIDAK PERLU menyertakan property "tables" pada output JSON, cukup kembalikan format berikut.
 
